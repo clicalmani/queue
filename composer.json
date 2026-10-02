@@ -1,0 +1,22 @@
+{
+    "name": "clicalmani/queue",
+    "description": "Queue package for Tonka framework",
+    "type": "library",
+    "require": {
+        "php": ">=8.3"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Clicalmani\\Queue\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "clicalmani",
+            "email": "clicalmani@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": false
+}
