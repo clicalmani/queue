@@ -7,7 +7,7 @@ use Clicalmani\Core\Support\Facades\Notification;
 use Clicalmani\Database\Notifications\NotificationContext;
 use Throwable;
 
-final class NotificationJob implements NotificationJobInterface
+class NotificationJob implements NotificationJobInterface
 {
     private ?NotificationContext $context = null;
 
