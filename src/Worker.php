@@ -63,15 +63,17 @@ final class Worker
                     }
 
                     try {
-                        $job = $this->queue->processNext($queue);
+                        $result = $this->queue->processNextJob($queue);
                     } finally {
                         pcntl_alarm(0);
                     }
 
-                    if ($job) {
+                    if ($result !== null) {
                         $processed = true;
-                        // Si processNext() renvoie un bool, adaptez le 2e argument
-                        event(new JobProcessed($queue, $job));
+
+                        if ($result['processed']) {
+                            event(new JobProcessed($result['id'], $queue));
+                        }
                     }
                 }
 

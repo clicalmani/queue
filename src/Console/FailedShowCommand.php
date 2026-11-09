@@ -4,6 +4,8 @@ namespace Clicalmani\Queue\Console;
 
 use Clicalmani\Console\Commands\Command;
 use Clicalmani\Core\Support\Facades\DB;
+use Clicalmani\Queue\Contracts\JobInterface;
+use Clicalmani\Queue\Contracts\NotificationJobInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -152,24 +154,29 @@ class FailedShowCommand extends Command
     }
 
     /**
-     * Affiche un résumé lisible du NotificationJob désérialisé.
+     * Affiche un résumé lisible du job désérialisé.
      */
     private function renderPayloadTree(object $job, OutputInterface $output): void
     {
-        if (! $job instanceof \Clicalmani\Core\Queue\NotificationJob) {
+        if (! $job instanceof JobInterface) {
             $output->writeln('<error>Unknown payload type: ' . $job::class . '</error>');
             return;
         }
 
         $output->writeln("Type          : <info>" . $job::class . "</info>");
-        $output->writeln("Notification  : <info>" . $job->notification()::class . "</info>");
-        $output->writeln("Notifiable    : <info>" . $job->notifiable()::class . "</info>");
         $output->writeln("Queue         : {$job->queue()}");
         $output->writeln("Tries         : {$job->tries()}");
 
         $backoff = $job->backoff();
         $output->writeln("Backoff       : " . (is_array($backoff) ? implode(', ', $backoff) : $backoff));
         $output->writeln("Timeout       : {$job->timeout()}s");
+
+        if (! $job instanceof NotificationJobInterface) {
+            return;
+        }
+
+        $output->writeln("Notification  : <info>" . $job->notification()::class . "</info>");
+        $output->writeln("Notifiable    : <info>" . $job->notifiable()::class . "</info>");
 
         $output->writeln('');
         $output->writeln('<comment>--- Notification properties ---</comment>');
@@ -243,7 +250,7 @@ class FailedShowCommand extends Command
         $table->setHeaders([
             'ID',
             'Queue',
-            'Notification',
+            'Job',
             'Exception',
             'Error (Excerpt)',
             'Failed At',
@@ -253,7 +260,7 @@ class FailedShowCommand extends Command
             $table->addRow([
                 $job->id,
                 $job->queue,
-                $this->extractNotificationName($job->payload),
+                $this->extractJobName($job->payload),
                 $job->error_class ?? 'Unknown',
                 $this->excerpt($job->error, 50),
                 $job->failed_at,
@@ -270,15 +277,15 @@ class FailedShowCommand extends Command
     }
 
     /**
-     * Tente d'extraire le nom de la notification depuis le payload sérialisé.
+     * Tente d'extraire le nom du job depuis le payload sérialisé.
      */
-    private function extractNotificationName(string $payload): string
+    private function extractJobName(string $payload): string
     {
         try {
             $job = @unserialize($payload);
 
-            if ($job instanceof \Clicalmani\Core\Queue\NotificationJob) {
-                return basename(str_replace('\\', '/', $job->notification()::class));
+            if ($job instanceof JobInterface) {
+                return basename(str_replace('\\', '/', $job::class));
             }
         } catch (\Throwable $e) {
             // Ignore

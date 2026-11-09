@@ -2,21 +2,18 @@
 
 namespace Clicalmani\Queue\Drivers;
 
+use Clicalmani\Queue\Contracts\JobInterface;
 use Clicalmani\Queue\Contracts\QueueDriver;
-use Clicalmani\Queue\NotificationJob;
 
 final class SyncQueueDriver implements QueueDriver
 {
-    /** @var array<string, NotificationJob> */
-    private array $jobs = [];
-
     public function push(string $queue, string $payload, int $delay = 0): string
     {
         $id = bin2hex(random_bytes(16));
 
         $job = unserialize($payload);
 
-        if (! $job instanceof NotificationJob) {
+        if (! $job instanceof JobInterface) {
             throw new \RuntimeException('Invalid job payload.');
         }
 

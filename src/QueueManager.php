@@ -2,6 +2,7 @@
 
 namespace Clicalmani\Queue;
 
+use Clicalmani\Queue\Contracts\JobInterface;
 use Clicalmani\Queue\Contracts\QueueDriver;
 use Clicalmani\Queue\Drivers\{
     SyncQueueDriver,
@@ -21,7 +22,7 @@ final class QueueManager
     /**
      * Pousse un job dans la queue.
      */
-    public function push(NotificationJob $job, int $delay = 0): string
+    public function push(JobInterface $job, int $delay = 0): string
     {
         $payload = serialize($job);
 
@@ -30,34 +31,47 @@ final class QueueManager
 
     /**
      * Récupère et exécute le prochain job d'une queue (utilisé par le worker).
+     *
+     * @return bool Vrai si un job a été prélevé (qu'il ait abouti ou non).
      */
     public function processNext(string $queue = 'default'): bool
+    {
+        return $this->processNextJob($queue) !== null;
+    }
+
+    /**
+     * Récupère et exécute le prochain job d'une queue.
+     *
+     * @return array{id: string, processed: bool}|null Le job prélevé et son
+     *         résultat, null si la queue est vide.
+     */
+    public function processNextJob(string $queue = 'default'): ?array
     {
         $record = $this->driver->pop($queue);
 
         if ($record === null) {
-            return false;
+            return null;
         }
 
         try {
             $job = unserialize($record['payload']);
 
-            if (! $job instanceof NotificationJob) {
+            if (! $job instanceof JobInterface) {
                 $this->driver->fail($record['id'], 'Invalid job payload.');
-                return true;
+                return ['id' => (string) $record['id'], 'processed' => false];
             }
 
             $job->handle();
             $this->driver->delete($record['id']);
 
-            return true;
+            return ['id' => (string) $record['id'], 'processed' => true];
         } catch (\Throwable $e) {
             $this->handleFailure($record, $job ?? null, $e);
-            return true;
+            return ['id' => (string) $record['id'], 'processed' => false];
         }
     }
 
-    private function handleFailure(array $record, ?NotificationJob $job, \Throwable $e): void
+    private function handleFailure(array $record, ?JobInterface $job, \Throwable $e): void
     {
         $maxTries = $job?->tries() ?? 1;
 
