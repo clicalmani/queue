@@ -7,7 +7,7 @@ interface QueueDriver
     /**
      * Pousse un job dans la queue. Retourne un identifiant unique.
      */
-    public function push(string $queue, string $payload, int $delay = 0): string;
+    public function push(string $queue, string|JobInterface $payload, int $delay = 0): string;
 
     /**
      * Récupère le prochain job disponible (null si vide).

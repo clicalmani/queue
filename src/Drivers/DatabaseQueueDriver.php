@@ -5,6 +5,7 @@ namespace Clicalmani\Queue\Drivers;
 use Clicalmani\Queue\Contracts\QueueDriver;
 use Clicalmani\Core\Support\Facades\DB;
 use Clicalmani\Database\Concerns\IsolationLevel;
+use Clicalmani\Queue\Contracts\JobInterface;
 
 final class DatabaseQueueDriver implements QueueDriver
 {
@@ -12,8 +13,12 @@ final class DatabaseQueueDriver implements QueueDriver
         private string $table = 'jobs',
     ) {}
 
-    public function push(string $queue, string $payload, int $delay = 0): string
+    public function push(string $queue, string|JobInterface $payload, int $delay = 0): string
     {
+        if ($payload instanceof JobInterface) {
+            $payload = serialize($payload);
+        }
+
         return (string) DB::table($this->table)->insert([
             'queue'        => $queue,
             'payload'      => $payload,
@@ -40,7 +45,7 @@ final class DatabaseQueueDriver implements QueueDriver
                 ->where('reserved_at IS NULL')
                 ->where('failed_at IS NULL')
                 ->where('available_at <= ?', [date('Y-m-d H:i:s')])
-                ->orderBy('id')
+                ->orderBy('id', 'DESC')
                 ->first();
 
             if (! $row) {

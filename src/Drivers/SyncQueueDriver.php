@@ -7,11 +7,11 @@ use Clicalmani\Queue\Contracts\QueueDriver;
 
 final class SyncQueueDriver implements QueueDriver
 {
-    public function push(string $queue, string $payload, int $delay = 0): string
+    public function push(string $queue, string|JobInterface $payload, int $delay = 0): string
     {
         $id = bin2hex(random_bytes(16));
 
-        $job = unserialize($payload);
+        $job = is_string($payload) ? unserialize($payload) : $payload;
 
         if (! $job instanceof JobInterface) {
             throw new \RuntimeException('Invalid job payload.');

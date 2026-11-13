@@ -2,6 +2,7 @@
 
 namespace Clicalmani\Queue\Drivers;
 
+use Clicalmani\Queue\Contracts\JobInterface;
 use Clicalmani\Queue\Contracts\QueueDriver;
 
 final class RedisQueueDriver implements QueueDriver
@@ -11,9 +12,13 @@ final class RedisQueueDriver implements QueueDriver
         private string $prefix = 'queue:',
     ) {}
 
-    public function push(string $queue, string $payload, int $delay = 0): string
+    public function push(string $queue, string|JobInterface $payload, int $delay = 0): string
     {
         $id = bin2hex(random_bytes(16));
+
+        if ($payload instanceof JobInterface) {
+            $payload = serialize($payload);
+        }
 
         $record = json_encode([
             'id'      => $id,
